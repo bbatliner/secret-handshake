@@ -1,188 +1,41 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-module.exports = function () {
-    // Constants
-    var DATA_RANGE = 400;
-    var DATA_BREADTH = 8;
-
-    var calibrateCount = localStorage.getItem("calibrateCount");
-    var tempArr = localStorage.getItem("MyoData");
-
-    for(i = 0; i < DATA_RANGE; i ++) {
-        for(j = 0; j < DATA_BREADTH; j ++) {
-            tempArr[i][j] /= calibrateCount;
-        }
-    }
-
-    localStorage.setItem("MyoData", tempArr);
-};
-
-},{}],2:[function(require,module,exports){
-module.exports = function (data) {
-    var relevantData = [];
-
-    // Constants
-    var DATA_RANGE = 400;
-    var DATA_BREADTH = 8;
-    var REST_DEVIATION = 20; // Threshold for when four sensors are deviating by 20
-
-    for(i = 0; i < DATA_RANGE; i ++) {
-        relevantData[i] = [0, 0, 0, 0, 0, 0, 0, 0];
-    }
-
-
-    function condense() {
-        first = firstRelevantRow();
-        console.log(first);
-        for(i = 0; i < DATA_RANGE; i ++) {
-            for(j = 0; j < DATA_BREADTH; j ++) {
-                relevantData[i][j] = data[i+first][j];
-                //console.log(relevantData[i][j]);
-            }
-        }
-    };
-
-    function firstRelevantRow() {
-        for (i = 0; i < 1200; i++) {
-                var extremeCount = 0;
-                for (j = 0; j < 8; j++) {
-                    if (Math.abs(data[i][j]) > REST_DEVIATION) {
-                        extremeCount += 1;
-                    }
-                }
-                if (extremeCount >= 4) {
-                    return i;
-                }
-            }
-            return 0;
-    };
-
-    condense();
-    var calibrateCount = localStorage.getItem("calibrateCount");
-    if (calibrateCount == 1) {
-        localStorage.setItem("MyoData", relevantData);
-    }
-    else {
-        var tempArr = [];
-        for(i = 0; i < DATA_RANGE; i ++) {
-            tempArr[i] = [0, 0, 0, 0, 0, 0, 0, 0];
-        }
-        tempArr = localStorage.getItem("MyoData");
-        for(a = 0; a < DATA_RANGE; a ++) {
-            for(b = 0; b < DATA_BREADTH; b ++) {
-                tempArr[a][b] += relevantData[a][b];
-            }
-        }
-        localStorage.setItem("MyoData", tempArr);
-    }
-};
-
-},{}],3:[function(require,module,exports){
 var Myo = require('myo');
-var cleanData = require('./clean-data');
-var baseline = require('./baseline');
 
-// The reference to the Myo connected to this app
-var myMyo = null;
+var LOG_EMG = true;
+var LOG_IMU = false;
+var data;
 
 Myo.connect();
 
 Myo.on('connected', function () {
-    document.getElementById('not-connected').style.display = 'none';
-    document.getElementById('calibrate').style.display = 'block';
-    document.getElementById('verify').style.display = 'none';
-    myMyo = Myo.myos[0];
-    myMyo.streamEMG(false);
+    console.log('connected');
+    var myo = Myo.myos[0];
+    myo.streamEMG(true);
+    myo.on('emg', function (data) {
+        // Array of 8 values, 1 reading for each sensor
+        if (LOG_EMG) console.log(data);
+    });
+    myo.on('imu', function (data) {
+        // data.orientation
+        //   w
+        //   x
+        //   y
+        //   z
+        // data.acclerometer
+        //   x
+        //   y
+        //   z
+        // data.gyroscope
+        //   x
+        //   y
+        //   z
+        if (LOG_IMU) console.log(data);
+    });
 });
 
-Myo.on('disconnected', function () {
-    document.getElementById('not-connected').style.display = 'block';
-    document.getElementById('calibrate').style.display = 'none';
-    document.getElementById('verify').style.display = 'none';
-});
+// Button click count
 
-var calibrateCount = 0;
-document.getElementById('button-calibrate').addEventListener('click', function (e) {
-    if (myMyo !== null) {
-        // Array to hold 7 seconds of calibration data
-        var calibrationData = [];
-        // Handle some DOM updates
-        e.target.disabled = true;
-        e.target.innerText = 'Calibrating...';
-        // Set the end time for 7 seconds in the future
-        var later = Date.now() + 7000;
-        // Start streaming and listening to EMG data
-        myMyo.streamEMG(true);
-        myMyo.on('emg', function (data) {
-            // Stop listening after 7 seconds
-            if (Date.now() > later) {
-                // Clear the listener
-                myMyo.off('emg');
-                // Take care of the DOM
-                e.target.disabled = false;
-                e.target.innerText = 'Calibrate';
-                document.getElementById('calibrate-count').innerText = ++calibrateCount;
-                localStorage.setItem('calibrateCount', calibrateCount);
-                cleanData(calibrationData);
-            } else {
-                // Add the EMG data to the array
-                calibrationData[calibrationData.length] = data;
-            }
-        });
-    }
-});
-
-document.getElementById('button-finish-calibrate').addEventListener('click', function () {
-    // Calculate a baseline
-    baseline();
-    // Transition to verify step
-    document.getElementById('not-connected').style.display = 'none';
-    document.getElementById('calibrate').style.display = 'none';
-    document.getElementById('verify').style.display = 'block';
-});
-
-},{"./baseline":1,"./clean-data":2,"myo":5}],4:[function(require,module,exports){
-// Reads baseline data and new handshake gesture and makes comparison
-
-// Constants
-var DATA_RANGE = 400; // Total number of data points being polled
-var MATCHING_DATA = 250; // Number of data points matching with the baseline
-var DEVIATION = .05; // Acceptable deviation threshold
-
-// Loads baseline data (space delimited file with 8 values)
-var baselineData = []; // One array with 8 values
-
-
-// Loads new incoming data
-var currentData = []; 
-
-
-// Comparing two data files
-var matching = 0;
-for(i = 0; i < DATA_RANGE; i ++) {
-	var lineCount = 0;
-	for(j = 0; j < 8; j ++) {
-		if (Math.abs(baselineData[j] - currentData[i][j]) < Math.abs(DEVIATION*baselineData[j])) {
-			lineCount += 1;
-		}
-	}
-	if (lineCount == 8) {
-		matching += 1;
-	}
-}
-
-if (matching > MATCHING_DATA) {
-	console.log("verified!"); // on success
-}
-else {
-	console.log("invalid!") // on failure
-}
-
-
-
-
-
-
-},{}],5:[function(require,module,exports){
+},{"myo":2}],2:[function(require,module,exports){
 (function(){
 	var Socket, myoList = {};
 	if(typeof window === 'undefined'){
@@ -524,7 +377,7 @@ else {
 
 
 
-},{"ws":6}],6:[function(require,module,exports){
+},{"ws":3}],3:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -569,4 +422,4 @@ function ws(uri, protocols, opts) {
 
 if (WebSocket) ws.prototype = WebSocket.prototype;
 
-},{}]},{},[3,2,1,4]);
+},{}]},{},[1]);

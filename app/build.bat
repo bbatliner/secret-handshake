@@ -1,1 +1,1 @@
-browserify .\scripts\handshake.js .\scripts\clean-data.js .\scripts\baseline.js -o bundle.js
+browserify .\scripts\handshake.js .\scripts\clean-data.js .\scripts\baseline.js .\scripts\verifications.js -o bundle.js
