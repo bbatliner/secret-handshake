@@ -10,6 +10,7 @@ Myo.on('connected', function () {
     var myo = Myo.myos[0];
     myo.streamEMG(true);
     myo.on('emg', function (data) {
+        // Array of 8 values, 1 reading for each sensor
         if (LOG_EMG) console.log(data);
     });
     myo.on('imu', function (data) {
