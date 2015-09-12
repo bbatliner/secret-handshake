@@ -1,0 +1,30 @@
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="styles/bootstrap.min.css">
+        <link rel="stylesheet" type="text/css" href="styles/custom.css">
+    </head>
+
+    <body>
+        <div class="container">
+            <h1>This is Myo Auth.</h1>
+
+            <div id="not-connected">
+                Please connect your Myo armband and be sure you are running the Myo Connect application.
+            </div>
+
+            <div id="calibrate" style="display: none">
+                <p>Welcome to the Myo auth system. Please click the button below to calibrate your identity.</p>
+                <p>Calibrate count: <span id="calibrate-count">0</span></p>
+                <button type="button" id="button-calibrate" class="btn btn-primary">Calibrate</button>
+                <button type="button" id="button-finish-calibrate" class="btn btn-primary">Finish Calibrating</button>
+            </div>
+
+            <div id="verify" style="display: none">
+                <p>Please click below to begin the verification process.</p>
+                <button type="button" id="button-verify">Verify muscle signature</button>
+            </div>
+        </div>
+    </body>
+
+    <script src="bundle.js"></script>
+</html>
