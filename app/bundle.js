@@ -5,7 +5,7 @@ module.exports = function () {
     var DATA_BREADTH = 8;
 
     var calibrateCount = localStorage.getItem("calibrateCount");
-    var tempArr = localStorage.getItem("MyoData");
+    var tempArr = JSON.parse(localStorage.getItem("MyoData"));
 
     for(i = 0; i < DATA_RANGE; i ++) {
         for(j = 0; j < DATA_BREADTH; j ++) {
@@ -13,7 +13,7 @@ module.exports = function () {
         }
     }
 
-    localStorage.setItem("MyoData", tempArr);
+    localStorage.setItem("MyoData", JSON.stringify(tempArr));
 };
 
 },{}],2:[function(require,module,exports){
@@ -59,20 +59,20 @@ module.exports = function (data) {
     condense();
     var calibrateCount = localStorage.getItem("calibrateCount");
     if (calibrateCount == 1) {
-        localStorage.setItem("MyoData", relevantData);
+        localStorage.setItem("MyoData", JSON.stringify(relevantData));
     }
     else {
         var tempArr = [];
         for(i = 0; i < DATA_RANGE; i ++) {
             tempArr[i] = [0, 0, 0, 0, 0, 0, 0, 0];
         }
-        tempArr = localStorage.getItem("MyoData");
+        tempArr = JSON.parse(localStorage.getItem("MyoData"));
         for(a = 0; a < DATA_RANGE; a ++) {
             for(b = 0; b < DATA_BREADTH; b ++) {
                 tempArr[a][b] += relevantData[a][b];
             }
         }
-        localStorage.setItem("MyoData", tempArr);
+        localStorage.setItem("MyoData", JSON.stringify(tempArr));
     }
 };
 
@@ -80,9 +80,11 @@ module.exports = function (data) {
 var Myo = require('myo');
 var cleanData = require('./clean-data');
 var baseline = require('./baseline');
+var verify = require('./verify');
 
 // The reference to the Myo connected to this app
 var myMyo = null;
+var calibrateCount = 0;
 
 Myo.connect();
 
@@ -100,7 +102,29 @@ Myo.on('disconnected', function () {
     document.getElementById('verify').style.display = 'none';
 });
 
-var calibrateCount = 0;
+var getUserMyoData = function (cb) {
+    if (myMyo !== null) {
+        var userData = [];
+
+        var later = Date.now() + 7000;
+        myMyo.streamEMG(true);
+        myMyo.on('emg', function (data) {
+            // Stop listening after 7 seconds
+            if (Date.now() > later) {
+                // Clear the listener
+                myMyo.off('emg');
+                myMyo.streamEMG(false);
+                calibrateCount++;
+                localStorage.setItem('calibrateCount', calibrateCount);
+                cb(userData);
+            } else {
+                // Add the EMG data to the array
+                userData[userData.length] = data;
+            }
+        });
+    }
+};
+
 document.getElementById('button-calibrate').addEventListener('click', function (e) {
     if (myMyo !== null) {
         // Array to hold 7 seconds of calibration data
@@ -117,6 +141,7 @@ document.getElementById('button-calibrate').addEventListener('click', function (
             if (Date.now() > later) {
                 // Clear the listener
                 myMyo.off('emg');
+                myMyo.streamEMG(false);
                 // Take care of the DOM
                 e.target.disabled = false;
                 e.target.innerText = 'Calibrate';
@@ -139,43 +164,49 @@ document.getElementById('button-finish-calibrate').addEventListener('click', fun
     document.getElementById('calibrate').style.display = 'none';
     document.getElementById('verify').style.display = 'block';
 });
+document.getElementById('button-verify').addEventListener('click', function() {
+    getUserMyoData(function (data) {
+        verify(data);
+    });
+});
 
-},{"./baseline":1,"./clean-data":2,"myo":5}],4:[function(require,module,exports){
+},{"./baseline":1,"./clean-data":2,"./verify":4,"myo":5}],4:[function(require,module,exports){
 // Reads baseline data and new handshake gesture and makes comparison
+module.exports = function(data) {
+	// Constants
+	var DATA_RANGE = 400; // Total number of data points being polled
+	var MATCHING_DATA = 200; // Number of data points matching with the baseline
+	var DEVIATION = 50; // Acceptable deviation threshold
 
-// Constants
-var DATA_RANGE = 400; // Total number of data points being polled
-var MATCHING_DATA = 250; // Number of data points matching with the baseline
-var DEVIATION = .05; // Acceptable deviation threshold
-
-// Loads baseline data (space delimited file with 8 values)
-var baselineData = []; // One array with 8 values
-
-
-// Loads new incoming data
-var currentData = []; 
+	// Loads baseline data (space delimited file with 8 values)
+	var baselineData = JSON.parse(localStorage.getItem("MyoData")); // One array with 8 values
 
 
-// Comparing two data files
-var matching = 0;
-for(i = 0; i < DATA_RANGE; i ++) {
-	var lineCount = 0;
-	for(j = 0; j < 8; j ++) {
-		if (Math.abs(baselineData[j] - currentData[i][j]) < Math.abs(DEVIATION*baselineData[j])) {
-			lineCount += 1;
+	// Loads new incoming data
+	var currentData = data; 
+
+
+	// Comparing two data files
+	var matching = 0;
+	for(i = 0; i < DATA_RANGE; i ++) {
+		var lineCount = 0;
+		for(j = 0; j < 8; j ++) {
+			if (Math.abs(baselineData[i][j] - currentData[i][j]) < DEVIATION) {
+				lineCount += 1;
+			}
+		}
+		if (lineCount == 8) {
+			matching += 1;
 		}
 	}
-	if (lineCount == 8) {
-		matching += 1;
-	}
-}
 
-if (matching > MATCHING_DATA) {
-	console.log("verified!"); // on success
-}
-else {
-	console.log("invalid!") // on failure
-}
+	if (matching > MATCHING_DATA) {
+		console.log("verified!"); // on success
+	}
+	else {
+		console.log("invalid!") // on failure
+	}
+};
 
 
 

@@ -40,19 +40,19 @@ module.exports = function (data) {
     condense();
     var calibrateCount = localStorage.getItem("calibrateCount");
     if (calibrateCount == 1) {
-        localStorage.setItem("MyoData", relevantData);
+        localStorage.setItem("MyoData", JSON.stringify(relevantData));
     }
     else {
         var tempArr = [];
         for(i = 0; i < DATA_RANGE; i ++) {
             tempArr[i] = [0, 0, 0, 0, 0, 0, 0, 0];
         }
-        tempArr = localStorage.getItem("MyoData");
+        tempArr = JSON.parse(localStorage.getItem("MyoData"));
         for(a = 0; a < DATA_RANGE; a ++) {
             for(b = 0; b < DATA_BREADTH; b ++) {
                 tempArr[a][b] += relevantData[a][b];
             }
         }
-        localStorage.setItem("MyoData", tempArr);
+        localStorage.setItem("MyoData", JSON.stringify(tempArr));
     }
 };

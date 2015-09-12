@@ -4,7 +4,7 @@ module.exports = function () {
     var DATA_BREADTH = 8;
 
     var calibrateCount = localStorage.getItem("calibrateCount");
-    var tempArr = localStorage.getItem("MyoData");
+    var tempArr = JSON.parse(localStorage.getItem("MyoData"));
 
     for(i = 0; i < DATA_RANGE; i ++) {
         for(j = 0; j < DATA_BREADTH; j ++) {
@@ -12,5 +12,5 @@ module.exports = function () {
         }
     }
 
-    localStorage.setItem("MyoData", tempArr);
+    localStorage.setItem("MyoData", JSON.stringify(tempArr));
 };

@@ -1,9 +1,11 @@
 var Myo = require('myo');
 var cleanData = require('./clean-data');
 var baseline = require('./baseline');
+var verify = require('./verify');
 
 // The reference to the Myo connected to this app
 var myMyo = null;
+var calibrateCount = 0;
 
 Myo.connect();
 
@@ -21,7 +23,29 @@ Myo.on('disconnected', function () {
     document.getElementById('verify').style.display = 'none';
 });
 
-var calibrateCount = 0;
+var getUserMyoData = function (cb) {
+    if (myMyo !== null) {
+        var userData = [];
+
+        var later = Date.now() + 7000;
+        myMyo.streamEMG(true);
+        myMyo.on('emg', function (data) {
+            // Stop listening after 7 seconds
+            if (Date.now() > later) {
+                // Clear the listener
+                myMyo.off('emg');
+                myMyo.streamEMG(false);
+                calibrateCount++;
+                localStorage.setItem('calibrateCount', calibrateCount);
+                cb(userData);
+            } else {
+                // Add the EMG data to the array
+                userData[userData.length] = data;
+            }
+        });
+    }
+};
+
 document.getElementById('button-calibrate').addEventListener('click', function (e) {
     if (myMyo !== null) {
         // Array to hold 7 seconds of calibration data
@@ -38,6 +62,7 @@ document.getElementById('button-calibrate').addEventListener('click', function (
             if (Date.now() > later) {
                 // Clear the listener
                 myMyo.off('emg');
+                myMyo.streamEMG(false);
                 // Take care of the DOM
                 e.target.disabled = false;
                 e.target.innerText = 'Calibrate';
@@ -59,4 +84,9 @@ document.getElementById('button-finish-calibrate').addEventListener('click', fun
     document.getElementById('not-connected').style.display = 'none';
     document.getElementById('calibrate').style.display = 'none';
     document.getElementById('verify').style.display = 'block';
+});
+document.getElementById('button-verify').addEventListener('click', function() {
+    getUserMyoData(function (data) {
+        verify(data);
+    });
 });
