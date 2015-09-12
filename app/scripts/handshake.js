@@ -24,57 +24,42 @@ Myo.on('disconnected', function () {
 });
 
 var getUserMyoData = function (cb) {
-    if (myMyo !== null) {
-        var userData = [];
+    if (myMyo === null) return cb([]);
 
-        var later = Date.now() + 7000;
-        myMyo.streamEMG(true);
-        myMyo.on('emg', function (data) {
-            // Stop listening after 7 seconds
-            if (Date.now() > later) {
-                // Clear the listener
-                myMyo.off('emg');
-                myMyo.streamEMG(false);
-                calibrateCount++;
-                localStorage.setItem('calibrateCount', calibrateCount);
-                cb(userData);
-            } else {
-                // Add the EMG data to the array
-                userData[userData.length] = data;
-            }
-        });
-    }
+    var userData = [];
+
+    var later = Date.now() + 7000;
+    myMyo.streamEMG(true);
+    myMyo.on('emg', function (data) {
+        // Stop listening after 7 seconds
+        if (Date.now() > later) {
+            // Clear the listener
+            myMyo.off('emg');
+            myMyo.streamEMG(false);
+            calibrateCount++;
+            localStorage.setItem('calibrateCount', calibrateCount);
+            cb(userData);
+        } else {
+            // Add the EMG data to the array
+            userData[userData.length] = data;
+        }
+    });
 };
 
 document.getElementById('button-calibrate').addEventListener('click', function (e) {
     if (myMyo !== null) {
-        // Array to hold 7 seconds of calibration data
-        var calibrationData = [];
         // Handle some DOM updates
         e.target.disabled = true;
         e.target.innerText = 'Calibrating...';
         document.getElementById('button-finish-calibrate').disabled = true;
-        // Set the end time for 7 seconds in the future
-        var later = Date.now() + 7000;
-        // Start streaming and listening to EMG data
-        myMyo.streamEMG(true);
-        myMyo.on('emg', function (data) {
-            // Stop listening after 7 seconds
-            if (Date.now() > later) {
-                // Clear the listener
-                myMyo.off('emg');
-                myMyo.streamEMG(false);
-                // Take care of the DOM
-                e.target.disabled = false;
-                e.target.innerText = 'Calibrate';
-                document.getElementById('button-finish-calibrate').disabled = false;
-                document.getElementById('calibrate-count').innerText = ++calibrateCount;
-                localStorage.setItem('calibrateCount', calibrateCount);
-                cleanData(calibrationData);
-            } else {
-                // Add the EMG data to the array
-                calibrationData[calibrationData.length] = data;
-            }
+        getUserMyoData(function (calibrationData) {
+            // Take care of the DOM
+            e.target.disabled = false;
+            e.target.innerText = 'Calibrate';
+            document.getElementById('button-finish-calibrate').disabled = false;
+            document.getElementById('calibrate-count').innerText = calibrateCount;
+            localStorage.setItem('calibrateCount', calibrateCount);
+            cleanData(calibrationData);
         });
     }
 });
