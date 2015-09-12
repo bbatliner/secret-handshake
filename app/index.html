@@ -2,26 +2,35 @@
     <head>
         <link rel="stylesheet" type="text/css" href="styles/bootstrap.min.css">
         <link rel="stylesheet" type="text/css" href="styles/custom.css">
+        <link rel="icon" href="img/favicon.ico">
+        <title>SecretHandshake</title>
     </head>
 
     <body>
-        <div class="container">
-            <h1>This is Myo Auth.</h1>
+        <div class="jumbotron">
+            <div class="container">
+                <div class="row well well-lg">
+                    <div class="col-md-6 col-md-offset-3">
+                        <h1>SecretHandshake</h1>
+                        <h3>The future of authentication</h3>
 
-            <div id="not-connected">
-                Please connect your Myo armband and be sure you are running the Myo Connect application.
-            </div>
+                        <div id="not-connected">
+                            Please connect your Myo armband and be sure you are running the Myo Connect application.
+                        </div>
 
-            <div id="calibrate" style="display: none">
-                <p>Welcome to the Myo auth system. Please click the button below to calibrate your identity.</p>
-                <p>Calibrate count: <span id="calibrate-count">0</span></p>
-                <button type="button" id="button-calibrate" class="btn btn-primary">Calibrate</button>
-                <button type="button" id="button-finish-calibrate" class="btn btn-primary">Finish Calibrating</button>
-            </div>
+                        <div id="calibrate" style="display: none">
+                            <p>Welcome to the Myo auth system. Please click the button below to calibrate your identity.</p>
+                            <p>Calibrate count: <span id="calibrate-count">0</span></p>
+                            <button type="button" id="button-calibrate" class="btn btn-primary">Calibrate</button>
+                            <button type="button" id="button-finish-calibrate" class="btn btn-primary">Finish Calibrating</button>
+                        </div>
 
-            <div id="verify" style="display: none">
-                <p>Please click below to begin the verification process.</p>
-                <button type="button" id="button-verify" class="btn btn-primary">Verify</button>
+                        <div id="verify" style="display: none">
+                            <p>Please click below to begin the verification process.</p>
+                            <button type="button" id="button-verify" class="btn btn-primary">Verify</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </body>
