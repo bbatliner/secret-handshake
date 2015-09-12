@@ -132,6 +132,7 @@ document.getElementById('button-calibrate').addEventListener('click', function (
         // Handle some DOM updates
         e.target.disabled = true;
         e.target.innerText = 'Calibrating...';
+        document.getElementById('button-finish-calibrate').disabled = true;
         // Set the end time for 7 seconds in the future
         var later = Date.now() + 7000;
         // Start streaming and listening to EMG data
@@ -145,6 +146,7 @@ document.getElementById('button-calibrate').addEventListener('click', function (
                 // Take care of the DOM
                 e.target.disabled = false;
                 e.target.innerText = 'Calibrate';
+                document.getElementById('button-finish-calibrate').disabled = false;
                 document.getElementById('calibrate-count').innerText = ++calibrateCount;
                 localStorage.setItem('calibrateCount', calibrateCount);
                 cleanData(calibrationData);
@@ -165,7 +167,11 @@ document.getElementById('button-finish-calibrate').addEventListener('click', fun
     document.getElementById('verify').style.display = 'block';
 });
 document.getElementById('button-verify').addEventListener('click', function() {
+    document.getElementById('button-verify').disabled = true;
+    document.getElementById('button-verify').innerText = 'Verifying...';
     getUserMyoData(function (data) {
+        document.getElementById('button-verify').disabled = false;
+        document.getElementById('button-verify').innerText = 'Verify';
         verify(data);
     });
 });
@@ -181,10 +187,8 @@ module.exports = function(data) {
 	// Loads baseline data (space delimited file with 8 values)
 	var baselineData = JSON.parse(localStorage.getItem("MyoData")); // One array with 8 values
 
-
 	// Loads new incoming data
 	var currentData = data; 
-
 
 	// Comparing two data files
 	var matching = 0;

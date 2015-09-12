@@ -8,10 +8,8 @@ module.exports = function(data) {
 	// Loads baseline data (space delimited file with 8 values)
 	var baselineData = JSON.parse(localStorage.getItem("MyoData")); // One array with 8 values
 
-
 	// Loads new incoming data
 	var currentData = data; 
-
 
 	// Comparing two data files
 	var matching = 0;
