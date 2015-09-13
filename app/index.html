@@ -23,14 +23,35 @@
                             <p>Calibrate count: <span id="calibrate-count">0</span></p>
                             <button type="button" id="button-calibrate" class="btn btn-primary">Calibrate</button>
                             <button type="button" id="button-finish-calibrate" class="btn btn-primary">Finish Calibrating</button>
+                            <button type="button" id="firebase-select-profile" class="btn btn-info">Authenticate as a saved user</button>
                             <p>Time remaining: <span id="timer-calibrate">7 seconds</span></p>
+                        </div>
+
+                        <div id="select-profile" style="display: none">
+                            <br>
+                            <p>Select a profile to authenticate with:</p>
+                            <select id="available-profiles">
+                            </select>
+                            <br><br>
+                            <button type="button" id="button-select-profile" class="btn btn-primary">Authenticate</button>
+                            <button type="button" class="btn btn-primary" onclick="location.reload();">Go back</button>
                         </div>
 
                         <div id="verify" style="display: none">
                             <p>Please click below to begin the verification process.</p>
                             <button type="button" id="button-verify" class="btn btn-primary">Verify</button>
+                            <button type="button" id="refresh" class="btn btn-primary" onclick="location.reload();">Recalibrate</button>
+                            <button type="button" id="firebase-save-calibration" class="btn btn-info">Save calibration</button>
                             <p>Time remaining: <span id="timer-verify">7 seconds</span></p>
                             <p id="verify-status">Not verified</p>
+                        </div>
+
+                        <div id="authenticate" style="display: none">
+                            <p>Please click below to try to authenticate as <span id="profile-name"></span>.</p>
+                            <button type="button" id="button-authenticate" class="btn btn-primary">Authenticate</button>
+                            <button type="button" class="btn btn-info" onclick="location.reload();">Go back</button>
+                            <p>Time remaining: <span id="timer-authenticate">7 seconds</span></p>
+                            <p id="authenticate-status">Not authenticated</p>
                         </div>
                     </div>
                 </div>
