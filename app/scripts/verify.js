@@ -7,7 +7,7 @@ module.exports = function(data, id, method) {
     var DATA_RANGE = 650; // Total number of data points being polled
     var MATCHING_DATA = 325; // Number of data points matching with the baseline
     var DEVIATION = 20; // Acceptable deviation threshold
-    var RESIDUAL_THRESHOLD = 25;
+    var RESIDUAL_THRESHOLD = 30;
 
     // Loads baseline data (space delimited file with 8 values)
     var baselineData = JSON.parse(localStorage.getItem("MyoData")); // One array with 8 values
