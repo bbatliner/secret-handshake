@@ -1,58 +1,53 @@
-module.exports = function (data) {
+module.exports = function (data, sum) {
     var relevantData = [];
+
+    var sum = sum || false;
 
     // Constants
     var DATA_RANGE = 400;
-    var DATA_BREADTH = 8;
-    var REST_DEVIATION = 20; // Threshold for when four sensors are deviating by 20
-
-    for(i = 0; i < DATA_RANGE; i ++) {
-        relevantData[i] = [0, 0, 0, 0, 0, 0, 0, 0];
-    }
-
+    var REST_THRESHOLD = 40; // Threshold for when four sensors are deviating by 20
 
     function condense() {
         first = firstRelevantRow();
-        console.log(first);
+        console.log('FIRST RELEVANT ROW:', first);
         for(i = 0; i < DATA_RANGE; i ++) {
-            for(j = 0; j < DATA_BREADTH; j ++) {
-                relevantData[i][j] = data[i+first][j];
+            relevantData[i] = data[i+first];
                 //console.log(relevantData[i][j]);
-            }
         }
     };
 
     function firstRelevantRow() {
         for (i = 0; i < 1200; i++) {
-                var extremeCount = 0;
-                for (j = 0; j < 8; j++) {
-                    if (Math.abs(data[i][j]) > REST_DEVIATION) {
-                        extremeCount += 1;
+            if (data[i] > REST_THRESHOLD) {
+                // Ensure the following 10 points are also not at rest
+                var actuallyIsActive = true;
+                for (var j = i + 1; j < i + 11; j++) {
+                    if (data[j] < REST_THRESHOLD) {
+                        actuallyIsActive = false;
+                        break;
                     }
                 }
-                if (extremeCount >= 4) {
+                if (actuallyIsActive) {
                     return i;
                 }
             }
-            return 0;
+        }
+        return 0;
     };
 
     condense();
     var calibrateCount = localStorage.getItem("calibrateCount");
-    if (calibrateCount == 1) {
-        localStorage.setItem("MyoData", JSON.stringify(relevantData));
+    if (calibrateCount == 1 || sum) {
+        // localStorage.setItem("MyoData", JSON.stringify(relevantData));
+        return relevantData;
     }
     else {
         var tempArr = [];
-        for(i = 0; i < DATA_RANGE; i ++) {
-            tempArr[i] = [0, 0, 0, 0, 0, 0, 0, 0];
-        }
         tempArr = JSON.parse(localStorage.getItem("MyoData"));
         for(a = 0; a < DATA_RANGE; a ++) {
-            for(b = 0; b < DATA_BREADTH; b ++) {
-                tempArr[a][b] += relevantData[a][b];
-            }
+            tempArr[a] += relevantData[a];
         }
-        localStorage.setItem("MyoData", JSON.stringify(tempArr));
+        // localStorage.setItem("MyoData", JSON.stringify(tempArr));
+        return tempArr;
     }
 };

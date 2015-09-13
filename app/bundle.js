@@ -2,82 +2,76 @@
 module.exports = function () {
     // Constants
     var DATA_RANGE = 400;
-    var DATA_BREADTH = 8;
 
     var calibrateCount = localStorage.getItem("calibrateCount");
     var tempArr = JSON.parse(localStorage.getItem("MyoData"));
 
     for(i = 0; i < DATA_RANGE; i ++) {
-        for(j = 0; j < DATA_BREADTH; j ++) {
-            tempArr[i][j] /= calibrateCount;
-        }
+        tempArr[i] /= calibrateCount;
     }
 
     localStorage.setItem("MyoData", JSON.stringify(tempArr));
 };
 
 },{}],2:[function(require,module,exports){
-module.exports = function (data) {
+module.exports = function (data, sum) {
     var relevantData = [];
+
+    var sum = sum || false;
 
     // Constants
     var DATA_RANGE = 400;
-    var DATA_BREADTH = 8;
-    var REST_DEVIATION = 20; // Threshold for when four sensors are deviating by 20
-
-    for(i = 0; i < DATA_RANGE; i ++) {
-        relevantData[i] = [0, 0, 0, 0, 0, 0, 0, 0];
-    }
-
+    var REST_THRESHOLD = 40; // Threshold for when four sensors are deviating by 20
 
     function condense() {
         first = firstRelevantRow();
-        console.log(first);
+        console.log('FIRST RELEVANT ROW:', first);
         for(i = 0; i < DATA_RANGE; i ++) {
-            for(j = 0; j < DATA_BREADTH; j ++) {
-                relevantData[i][j] = data[i+first][j];
+            relevantData[i] = data[i+first];
                 //console.log(relevantData[i][j]);
-            }
         }
     };
 
     function firstRelevantRow() {
         for (i = 0; i < 1200; i++) {
-                var extremeCount = 0;
-                for (j = 0; j < 8; j++) {
-                    if (Math.abs(data[i][j]) > REST_DEVIATION) {
-                        extremeCount += 1;
+            if (data[i] > REST_THRESHOLD) {
+                // Ensure the following 10 points are also not at rest
+                var actuallyIsActive = true;
+                for (var j = i + 1; j < i + 11; j++) {
+                    if (data[j] < REST_THRESHOLD) {
+                        actuallyIsActive = false;
+                        break;
                     }
                 }
-                if (extremeCount >= 4) {
+                if (actuallyIsActive) {
                     return i;
                 }
             }
-            return 0;
+        }
+        return 0;
     };
 
     condense();
     var calibrateCount = localStorage.getItem("calibrateCount");
-    if (calibrateCount == 1) {
-        localStorage.setItem("MyoData", JSON.stringify(relevantData));
+    if (calibrateCount == 1 || sum) {
+        // localStorage.setItem("MyoData", JSON.stringify(relevantData));
+        return relevantData;
     }
     else {
         var tempArr = [];
-        for(i = 0; i < DATA_RANGE; i ++) {
-            tempArr[i] = [0, 0, 0, 0, 0, 0, 0, 0];
-        }
         tempArr = JSON.parse(localStorage.getItem("MyoData"));
         for(a = 0; a < DATA_RANGE; a ++) {
-            for(b = 0; b < DATA_BREADTH; b ++) {
-                tempArr[a][b] += relevantData[a][b];
-            }
+            tempArr[a] += relevantData[a];
         }
-        localStorage.setItem("MyoData", JSON.stringify(tempArr));
+        // localStorage.setItem("MyoData", JSON.stringify(tempArr));
+        return tempArr;
     }
 };
 
 },{}],3:[function(require,module,exports){
 var Myo = require('myo');
+var median = require('filters').median;
+var average = require('filters').average;
 var cleanData = require('./clean-data');
 var baseline = require('./baseline');
 var verify = require('./verify');
@@ -85,6 +79,9 @@ var verify = require('./verify');
 // The reference to the Myo connected to this app
 var myMyo = null;
 var calibrateCount = 0;
+
+var AVG_WINDOW_SIZE = 25;
+var AVG_THRESHOLD = 50;
 
 Myo.connect();
 
@@ -118,11 +115,40 @@ var getUserMyoData = function (cb) {
             calibrateCount++;
             localStorage.setItem('calibrateCount', calibrateCount);
             cb(userData);
+
+            // Do some experimental data stuff
+            // console.log();
         } else {
             // Add the EMG data to the array
             userData[userData.length] = data;
+
+
+            // Do some experimental data stuff
+            // var sum = data.reduce(function (prev, next) {
+            //     return Math.abs(prev) + Math.abs(next);
+            // });
+            // bucket.push(sum);
+            // if (bucket.length > AVG_WINDOW_SIZE) {
+            //     var avg = 0;
+            //     for (var i = 0, len = bucket.length; i < len; i++) {
+            //         avg += bucket[i];
+            //     }
+            //     avg /= bucket.length;
+            //     bucket = [];
+            //     document.write(avg + '\n');
+            // }            
         }
     });
+};
+
+var aggregateRawMyoData = function (rawData) {
+    var data = [];
+    for (var i = 0, len = rawData.length; i < len; i++) {
+        data[i] = rawData[i].reduce(function (prev, next) {
+            return Math.abs(prev) + Math.abs(next);
+        });
+    }
+    return data;
 };
 
 document.getElementById('button-calibrate').addEventListener('click', function (e) {
@@ -138,7 +164,11 @@ document.getElementById('button-calibrate').addEventListener('click', function (
             document.getElementById('button-finish-calibrate').disabled = false;
             document.getElementById('calibrate-count').innerText = calibrateCount;
             localStorage.setItem('calibrateCount', calibrateCount);
-            cleanData(calibrationData);
+            var aggregatedData = aggregateRawMyoData(calibrationData);
+            var avgData = average(aggregatedData, AVG_WINDOW_SIZE, AVG_THRESHOLD);
+            console.log('Calibration data:\n' + avgData.toString());
+            var clean = cleanData(avgData);
+            localStorage.setItem('MyoData', JSON.stringify(clean));
         });
     }
 });
@@ -157,52 +187,189 @@ document.getElementById('button-verify').addEventListener('click', function() {
     getUserMyoData(function (data) {
         document.getElementById('button-verify').disabled = false;
         document.getElementById('button-verify').innerText = 'Verify';
-        verify(data);
+        var aggregatedData = aggregateRawMyoData(data);
+        var avgData = average(aggregatedData, AVG_WINDOW_SIZE, AVG_THRESHOLD);
+        console.log('Verification data:\n' + avgData.toString());
+        verify(avgData, 'residual');
     });
 });
 
-},{"./baseline":1,"./clean-data":2,"./verify":4,"myo":5}],4:[function(require,module,exports){
+},{"./baseline":1,"./clean-data":2,"./verify":4,"filters":5,"myo":9}],4:[function(require,module,exports){
+var cleanData = require('./clean-data');
+var median = require('filters').median;
+
 // Reads baseline data and new handshake gesture and makes comparison
-module.exports = function(data) {
-	// Constants
-	var DATA_RANGE = 400; // Total number of data points being polled
-	var MATCHING_DATA = 200; // Number of data points matching with the baseline
-	var DEVIATION = 50; // Acceptable deviation threshold
+module.exports = function(data, method) {
+    // Constants
+    var DATA_RANGE = 400; // Total number of data points being polled
+    var MATCHING_DATA = 200; // Number of data points matching with the baseline
+    var DEVIATION = 20; // Acceptable deviation threshold
+    var RESIDUAL_THRESHOLD = 25;
 
-	// Loads baseline data (space delimited file with 8 values)
-	var baselineData = JSON.parse(localStorage.getItem("MyoData")); // One array with 8 values
+    // Loads baseline data (space delimited file with 8 values)
+    var baselineData = JSON.parse(localStorage.getItem("MyoData")); // One array with 8 values
 
-	// Loads new incoming data
-	var currentData = data; 
+    // Loads new incoming data
+    var currentData = cleanData(data, true);
 
-	// Comparing two data files
-	var matching = 0;
-	for(i = 0; i < DATA_RANGE; i ++) {
-		var lineCount = 0;
-		for(j = 0; j < 8; j ++) {
-			if (Math.abs(baselineData[i][j] - currentData[i][j]) < DEVIATION) {
-				lineCount += 1;
-			}
+    if (method === 'deviation') {
+	    // Comparing two data files
+	    var matching = 0;
+	    for(i = 0; i < DATA_RANGE; i ++) {
+	        if (Math.abs(baselineData[i] - currentData[i]) < DEVIATION) {
+	            matching += 1;
+	        }
+	    }
+
+	    if (matching > MATCHING_DATA) {
+	        console.log("verified!"); // on success
+	    }
+	    else {
+	        console.log("invalid!") // on failure
+	    }
+	} else if (method === 'residual') {
+		var residuals = [];
+		for (var i = 0; i < DATA_RANGE; i++) {
+			residuals[i] = Math.abs(baselineData[i] - currentData[i]);
 		}
-		if (lineCount == 8) {
-			matching += 1;
+		var medianResiduals = median(residuals, 5);
+		var avg = 0;
+		for (var i = 0; i < DATA_RANGE; i++) {
+			avg += medianResiduals[i];
+		}
+		avg /= DATA_RANGE;
+		if (avg < RESIDUAL_THRESHOLD) {
+			console.log('verified!');
+		} else {
+			console.log('invalid');
 		}
 	}
+};
 
-	if (matching > MATCHING_DATA) {
-		console.log("verified!"); // on success
-	}
-	else {
-		console.log("invalid!") // on failure
-	}
+},{"./clean-data":2,"filters":5}],5:[function(require,module,exports){
+"use strict";
+
+module.exports = {
+    median: require('./lib/median'),
+    average: require('./lib/average'),
+    aggregate: require('./lib/aggregate'),
+};
+
+
+},{"./lib/aggregate":6,"./lib/average":7,"./lib/median":8}],6:[function(require,module,exports){
+"use strict";
+
+module.exports = function aggregate(arr, fun) {
+    var tmp = Object.create(null);
+    for (var i = 0; i < arr.length; i++) {
+        var k = fun(arr[i][0]);
+        var v = arr[i][1];
+
+        var t = tmp[k] || [];
+        t.push(v);
+        tmp[k] = t;
+    }
+
+    var res = [];
+    for (var key in tmp) {
+        var d = tmp[key];
+        d.sort(function (a, b) { return a - b; });
+        var min = Math.min.apply(null, d);
+        var max = Math.max.apply(null, d);
+        var sum = d.reduce(function (a, b) { return a + b; }, 0);
+        var med = d[Math.floor(d.length / 2)];
+        // If it looks like a numeric key, make it one
+        if ('' + (+key) === key) {
+            key = +key;
+        }
+        res.push([key, {min:min, max:max, sum:sum, med:med, cnt:d.length}]);
+    }
+
+    return res;
+};
+
+},{}],7:[function(require,module,exports){
+"use strict";
+
+var filters = {};
+
+function fact(a, b) {
+    var n1 = Math.max(a, b);
+    var n2 = Math.min(a, b);
+    return (n1 - n2) / n1;
+}
+
+module.exports = function (arr, wl, thres) {
+    function average(arr) {
+        var acc = 0;
+        for (var i = 0; i < arr.length; i++) {
+            acc += arr[i];
+        }
+        return acc / arr.length;
+    }
+
+    wl = wl || 3;
+
+    var w = [];
+    var f = [];
+    for (var i = 0; i < arr.length; i++) 
+    {
+        if (thres && w.length > 0 && fact(arr[i], w[w.length - 1]) > thres) {
+            w = [];
+        } else {
+            if (w.length >= wl)
+                w.shift();
+        }
+        w.push(arr[i]);
+
+        f.push(average(w));
+    }
+
+    return f;
+};
+
+module.exports.difference = fact;
+
+
+},{}],8:[function(require,module,exports){
+"use strict";
+
+var filters = {};
+
+module.exports = function (arr, wl) {
+    function median(arr) {
+        var s = arr.slice().sort(function(a,b){
+            return a - b;
+        });
+        return s[Math.floor((s.length - 1) / 2)];
+    }
+
+    wl = wl || 3;
+
+    if (arr.length < wl) {
+        return arr;
+    }
+
+    var f = [];
+    var w = [];
+    var i;
+
+    w.push(arr[0]);
+    for (i = 0; i < arr.length; i++) 
+    {
+        if (arr.length - 1 >= i + Math.floor(wl / 2))
+            w.push(arr[i + Math.floor(wl / 2)]);
+        f.push(median(w));
+        if (i >= Math.floor(wl / 2))
+            w.shift();
+    }
+
+    return f;
 };
 
 
 
-
-
-
-},{}],5:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 (function(){
 	var Socket, myoList = {};
 	if(typeof window === 'undefined'){
@@ -544,7 +711,7 @@ module.exports = function(data) {
 
 
 
-},{"ws":6}],6:[function(require,module,exports){
+},{"ws":10}],10:[function(require,module,exports){
 
 /**
  * Module dependencies.

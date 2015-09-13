@@ -1,4 +1,6 @@
 var Myo = require('myo');
+var median = require('filters').median;
+var average = require('filters').average;
 var cleanData = require('./clean-data');
 var baseline = require('./baseline');
 var verify = require('./verify');
@@ -6,6 +8,9 @@ var verify = require('./verify');
 // The reference to the Myo connected to this app
 var myMyo = null;
 var calibrateCount = 0;
+
+var AVG_WINDOW_SIZE = 25;
+var AVG_THRESHOLD = 50;
 
 Myo.connect();
 
@@ -39,11 +44,40 @@ var getUserMyoData = function (cb) {
             calibrateCount++;
             localStorage.setItem('calibrateCount', calibrateCount);
             cb(userData);
+
+            // Do some experimental data stuff
+            // console.log();
         } else {
             // Add the EMG data to the array
             userData[userData.length] = data;
+
+
+            // Do some experimental data stuff
+            // var sum = data.reduce(function (prev, next) {
+            //     return Math.abs(prev) + Math.abs(next);
+            // });
+            // bucket.push(sum);
+            // if (bucket.length > AVG_WINDOW_SIZE) {
+            //     var avg = 0;
+            //     for (var i = 0, len = bucket.length; i < len; i++) {
+            //         avg += bucket[i];
+            //     }
+            //     avg /= bucket.length;
+            //     bucket = [];
+            //     document.write(avg + '\n');
+            // }            
         }
     });
+};
+
+var aggregateRawMyoData = function (rawData) {
+    var data = [];
+    for (var i = 0, len = rawData.length; i < len; i++) {
+        data[i] = rawData[i].reduce(function (prev, next) {
+            return Math.abs(prev) + Math.abs(next);
+        });
+    }
+    return data;
 };
 
 document.getElementById('button-calibrate').addEventListener('click', function (e) {
@@ -59,7 +93,11 @@ document.getElementById('button-calibrate').addEventListener('click', function (
             document.getElementById('button-finish-calibrate').disabled = false;
             document.getElementById('calibrate-count').innerText = calibrateCount;
             localStorage.setItem('calibrateCount', calibrateCount);
-            cleanData(calibrationData);
+            var aggregatedData = aggregateRawMyoData(calibrationData);
+            var avgData = average(aggregatedData, AVG_WINDOW_SIZE, AVG_THRESHOLD);
+            console.log('Calibration data:\n' + avgData.toString());
+            var clean = cleanData(avgData);
+            localStorage.setItem('MyoData', JSON.stringify(clean));
         });
     }
 });
@@ -78,6 +116,9 @@ document.getElementById('button-verify').addEventListener('click', function() {
     getUserMyoData(function (data) {
         document.getElementById('button-verify').disabled = false;
         document.getElementById('button-verify').innerText = 'Verify';
-        verify(data);
+        var aggregatedData = aggregateRawMyoData(data);
+        var avgData = average(aggregatedData, AVG_WINDOW_SIZE, AVG_THRESHOLD);
+        console.log('Verification data:\n' + avgData.toString());
+        verify(avgData, 'residual');
     });
 });
