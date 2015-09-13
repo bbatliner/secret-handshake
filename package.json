@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "firebase": "^2.2.9",
     "myo": "^2.0.1"
   }
 }

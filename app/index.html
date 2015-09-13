@@ -3,7 +3,7 @@
         <link rel="stylesheet" type="text/css" href="styles/bootstrap.min.css">
         <link rel="stylesheet" type="text/css" href="styles/custom.css">
         <link rel="icon" href="img/favicon.ico">
-        <title>SecretHandshake</title>
+        <title>Myo Auth</title>
     </head>
 
     <body>
@@ -11,7 +11,7 @@
             <div class="container">
                 <div class="row well well-lg">
                     <div class="col-md-6 col-md-offset-3">
-                        <h1>SecretHandshake</h1>
+                        <h1>Myo Auth</h1>
                         <h3>The future of authentication</h3>
 
                         <div id="not-connected">
@@ -23,11 +23,14 @@
                             <p>Calibrate count: <span id="calibrate-count">0</span></p>
                             <button type="button" id="button-calibrate" class="btn btn-primary">Calibrate</button>
                             <button type="button" id="button-finish-calibrate" class="btn btn-primary">Finish Calibrating</button>
+                            <p>Time remaining: <span id="timer-calibrate">7 seconds</span></p>
                         </div>
 
                         <div id="verify" style="display: none">
                             <p>Please click below to begin the verification process.</p>
                             <button type="button" id="button-verify" class="btn btn-primary">Verify</button>
+                            <p>Time remaining: <span id="timer-verify">7 seconds</span></p>
+                            <p id="verify-status">Not verified</p>
                         </div>
                     </div>
                 </div>

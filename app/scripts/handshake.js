@@ -1,9 +1,11 @@
 var Myo = require('myo');
+var Firebase = require('firebase');
 var median = require('filters').median;
 var average = require('filters').average;
 var cleanData = require('./clean-data');
 var baseline = require('./baseline');
 var verify = require('./verify');
+var timer = require('./timer');
 
 // The reference to the Myo connected to this app
 var myMyo = null;
@@ -20,6 +22,7 @@ Myo.on('connected', function () {
     document.getElementById('verify').style.display = 'none';
     myMyo = Myo.myos[0];
     myMyo.streamEMG(false);
+    Myo.setLockingPolicy('none');
 });
 
 Myo.on('disconnected', function () {
@@ -44,28 +47,9 @@ var getUserMyoData = function (cb) {
             calibrateCount++;
             localStorage.setItem('calibrateCount', calibrateCount);
             cb(userData);
-
-            // Do some experimental data stuff
-            // console.log();
         } else {
             // Add the EMG data to the array
-            userData[userData.length] = data;
-
-
-            // Do some experimental data stuff
-            // var sum = data.reduce(function (prev, next) {
-            //     return Math.abs(prev) + Math.abs(next);
-            // });
-            // bucket.push(sum);
-            // if (bucket.length > AVG_WINDOW_SIZE) {
-            //     var avg = 0;
-            //     for (var i = 0, len = bucket.length; i < len; i++) {
-            //         avg += bucket[i];
-            //     }
-            //     avg /= bucket.length;
-            //     bucket = [];
-            //     document.write(avg + '\n');
-            // }            
+            userData[userData.length] = data;          
         }
     });
 };
@@ -85,6 +69,7 @@ document.getElementById('button-calibrate').addEventListener('click', function (
         // Handle some DOM updates
         e.target.disabled = true;
         e.target.innerText = 'Calibrating...';
+        timer('timer-calibrate', 7);
         document.getElementById('button-finish-calibrate').disabled = true;
         getUserMyoData(function (calibrationData) {
             // Take care of the DOM
@@ -113,12 +98,13 @@ document.getElementById('button-finish-calibrate').addEventListener('click', fun
 document.getElementById('button-verify').addEventListener('click', function() {
     document.getElementById('button-verify').disabled = true;
     document.getElementById('button-verify').innerText = 'Verifying...';
+    timer('timer-verify', 7);
     getUserMyoData(function (data) {
         document.getElementById('button-verify').disabled = false;
         document.getElementById('button-verify').innerText = 'Verify';
         var aggregatedData = aggregateRawMyoData(data);
         var avgData = average(aggregatedData, AVG_WINDOW_SIZE, AVG_THRESHOLD);
         console.log('Verification data:\n' + avgData.toString());
-        verify(avgData, 'residual');
+        verify(avgData, 'verify-status', 'residual');
     });
 });

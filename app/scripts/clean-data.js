@@ -4,15 +4,14 @@ module.exports = function (data, sum) {
     var sum = sum || false;
 
     // Constants
-    var DATA_RANGE = 400;
-    var REST_THRESHOLD = 40; // Threshold for when four sensors are deviating by 20
+    var DATA_RANGE = 650; // a little less than 5s of data
+    var REST_THRESHOLD = 60; // Threshold for when four sensors are deviating by 20
 
     function condense() {
         first = firstRelevantRow();
         console.log('FIRST RELEVANT ROW:', first);
         for(i = 0; i < DATA_RANGE; i ++) {
             relevantData[i] = data[i+first];
-                //console.log(relevantData[i][j]);
         }
     };
 

@@ -2,10 +2,10 @@ var cleanData = require('./clean-data');
 var median = require('filters').median;
 
 // Reads baseline data and new handshake gesture and makes comparison
-module.exports = function(data, method) {
+module.exports = function(data, id, method) {
     // Constants
-    var DATA_RANGE = 400; // Total number of data points being polled
-    var MATCHING_DATA = 200; // Number of data points matching with the baseline
+    var DATA_RANGE = 650; // Total number of data points being polled
+    var MATCHING_DATA = 325; // Number of data points matching with the baseline
     var DEVIATION = 20; // Acceptable deviation threshold
     var RESIDUAL_THRESHOLD = 25;
 
@@ -15,6 +15,7 @@ module.exports = function(data, method) {
     // Loads new incoming data
     var currentData = cleanData(data, true);
 
+    var authenticated = false;
     if (method === 'deviation') {
 	    // Comparing two data files
 	    var matching = 0;
@@ -25,10 +26,7 @@ module.exports = function(data, method) {
 	    }
 
 	    if (matching > MATCHING_DATA) {
-	        console.log("verified!"); // on success
-	    }
-	    else {
-	        console.log("invalid!") // on failure
+	        authenticated = true;
 	    }
 	} else if (method === 'residual') {
 		var residuals = [];
@@ -42,9 +40,15 @@ module.exports = function(data, method) {
 		}
 		avg /= DATA_RANGE;
 		if (avg < RESIDUAL_THRESHOLD) {
-			console.log('verified!');
-		} else {
-			console.log('invalid');
+			authenticated = true;
 		}
 	}
+
+    if (authenticated) {
+        document.getElementById(id).innerText = 'Security test passed... User verified! (' + avg + ')';
+    } else {
+        document.getElementById(id).innerText = 'Security test failed... Invalid user! (' + avg + ')';
+    }
+
+
 };
